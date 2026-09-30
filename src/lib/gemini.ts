@@ -7,31 +7,13 @@ export interface ChatHistoryItem {
   parts: [{ text: string }]
 }
 
-// Key fragments — split so GitHub secret scanner doesn't flag the raw key
-// Reassembled at runtime only; never stored in plain form in repo
-const _kp = ['AQ.Ab8RN6LMlBH', 'Sr6DHVs0nBCmp9', 'RykGW1AARMQg4S4', 'OCn0SuHK0Q']
-
-function _assembleDefaultKey(): string {
-  return _kp.join('')
+/** Check if the key looks like a real Google Gemini/AI Studio API key (starts with AIza) */
+export function isValidGeminiKey(key: string): boolean {
+  return key.startsWith('AIza') && key.length > 30
 }
-
-/** Ensure the default key is seeded into localStorage on first app load */
-function _seedDefaultKeyIfMissing() {
-  if (typeof window === 'undefined') return
-  const existing = localStorage.getItem('skillbridge_gemini_api_key')
-  if (!existing || !existing.trim()) {
-    const key = _assembleDefaultKey()
-    localStorage.setItem('skillbridge_gemini_api_key', key)
-  }
-}
-
-// Seed the key immediately when this module is imported
-_seedDefaultKeyIfMissing()
 
 export function getGeminiApiKey(): string {
-  _seedDefaultKeyIfMissing()
-
-  // 1. Check localStorage for user-provided key (or auto-seeded default)
+  // 1. Check localStorage for user-provided key
   const storedKey = typeof window !== 'undefined' ? localStorage.getItem('skillbridge_gemini_api_key') : null
   if (storedKey && storedKey.trim()) return storedKey.trim()
 
@@ -118,7 +100,19 @@ export async function askGeminiAgent(
   // If no Gemini key is provided, use intelligent role-based assistant fallback
   if (!apiKey) {
     return {
-      text: getFallbackResponse(prompt, role, userContext),
+      text: `⚠️ **Gemini API Key Required**\n\nTo get real AI responses, please add your Google Gemini API key:\n\n1. Go to **[aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)**\n2. Click **"Create API Key"**\n3. Copy the key (starts with \`AIzaSy...\`)\n4. Click the 🔑 **key icon** in this chat header and paste it\n\nOr ask your admin to set \`GEMINI_API_KEY\` in Vercel environment variables.`,
+      source: 'fallback',
+    }
+  }
+
+  // Validate key format — Gemini keys always start with "AIza"
+  if (!isValidGeminiKey(apiKey)) {
+    // Clear the invalid key from localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('skillbridge_gemini_api_key')
+    }
+    return {
+      text: `❌ **Invalid Gemini API Key Detected**\n\nThe stored key does not look like a Google Gemini API key (Gemini keys start with \`AIza\`).\n\nThe key has been cleared. Please:\n1. Go to **[aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)**\n2. Create a new API key\n3. Click the 🔑 icon above and paste the correct key`,
       source: 'fallback',
     }
   }

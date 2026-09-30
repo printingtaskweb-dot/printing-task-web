@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { Button, Input } from '@/components/ui'
 import { ResumeGeneratorModal } from './ResumeGeneratorModal'
-import { askGeminiAgent, getGeminiApiKey, setGeminiApiKey } from '@/lib/gemini'
+import { askGeminiAgent, getGeminiApiKey, setGeminiApiKey, isValidGeminiKey } from '@/lib/gemini'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 
@@ -45,9 +45,19 @@ export function AiChatWidget() {
 
   useEffect(() => {
     const key = getGeminiApiKey()
-    setHasKey(!!key)
-    setApiKeyInput(key)
+    // Auto-clear any invalid key (e.g. the AddThis AQ. key mistakenly stored)
+    if (key && !isValidGeminiKey(key)) {
+      localStorage.removeItem('skillbridge_gemini_api_key')
+      setHasKey(false)
+      setApiKeyInput('')
+      // Auto-open the key drawer so user knows to fix it
+      if (isOpen) setShowKeyModal(true)
+    } else {
+      setHasKey(!!key)
+      setApiKeyInput(key)
+    }
   }, [showKeyModal, isOpen])
+
 
   // Initialize role-specific welcome message — wait for auth to finish loading
   useEffect(() => {
