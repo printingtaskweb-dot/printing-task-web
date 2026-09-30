@@ -94,7 +94,7 @@ export default function StudentProfile() {
         degree: newEdu.degree,
         field_of_study: newEdu.field_of_study,
         end_year: parseInt(newEdu.end_year) || undefined,
-      }).select().single()
+      } as any).select().single()
 
       if (error) throw error
       setEducationList([...educationList, data])
@@ -119,7 +119,7 @@ export default function StudentProfile() {
     if (!user || !studentProfile) return
     setSaving(true)
     try {
-      await supabase.from('profiles').update({ phone: form.phone }).eq('id', user.id)
+      await supabase.from('profiles').update({ phone: form.phone } as any).eq('id', user.id)
       await supabase.from('student_profiles').update({
         headline: form.headline,
         bio: form.bio,
@@ -129,7 +129,7 @@ export default function StudentProfile() {
         portfolio_url: form.portfolioUrl,
         resume_url: form.resumeUrl,
         experience_level: form.experienceLevel as any,
-      }).eq('user_id', user.id)
+      } as any).eq('user_id', user.id)
 
       // Sync skills
       await supabase.from('student_skills').delete().eq('student_id', studentProfile.id)
@@ -139,7 +139,7 @@ export default function StudentProfile() {
           skill_id: skId,
           proficiency: 'intermediate' as const,
         }))
-        await supabase.from('student_skills').insert(studentSkills)
+        await supabase.from('student_skills').insert(studentSkills as any)
       }
 
       toast.success('Profile updated successfully!')

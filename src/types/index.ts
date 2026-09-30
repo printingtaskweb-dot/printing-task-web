@@ -1,3 +1,18 @@
+import type {
+  Job,
+  BusinessProfile,
+  Profile,
+  Skill,
+  StudentProfile,
+  Application,
+  Hackathon,
+  Blog,
+  BlogCategory,
+  Category,
+  StudentEducation,
+  StudentAvailability,
+} from './database'
+
 export * from './database'
 
 export interface AuthUser {
@@ -21,37 +36,41 @@ export interface MatchScore {
   }
 }
 
-export interface JobWithDetails extends import('./database').Job {
-  business_profiles?: import('./database').BusinessProfile & { profiles?: import('./database').Profile }
-  job_skills?: Array<{ skill_id: string; is_required: boolean; skills?: import('./database').Skill }>
+export interface JobWithDetails extends Job {
+  business_profiles?: BusinessProfile & { profiles?: Profile }
+  job_skills?: Array<{ skill_id: string; is_required: boolean; skills?: Skill }>
   match_score?: MatchScore
   is_saved?: boolean
   has_applied?: boolean
 }
 
-export interface StudentWithDetails extends import('./database').StudentProfile {
-  profiles?: import('./database').Profile
-  student_skills?: Array<{ skill_id: string; proficiency?: string; skills?: import('./database').Skill & { categories?: import('./database').Category } }>
-  student_education?: import('./database').StudentEducation[]
-  student_availability?: import('./database').StudentAvailability
-  primary_category?: import('./database').Category
+export interface StudentWithDetails extends StudentProfile {
+  profiles?: Profile
+  student_skills?: Array<{
+    skill_id: string
+    proficiency?: string
+    skills?: Skill & { categories?: Category }
+  }>
+  student_education?: StudentEducation[]
+  student_availability?: StudentAvailability
+  primary_category?: Category
   match_score?: MatchScore
 }
 
-export interface ApplicationWithDetails extends import('./database').Application {
+export interface ApplicationWithDetails extends Application {
   jobs?: JobWithDetails
   student_profiles?: StudentWithDetails
-  business_profiles?: import('./database').BusinessProfile
+  business_profiles?: BusinessProfile
 }
 
-export interface HackathonWithDetails extends import('./database').Hackathon {
+export interface HackathonWithDetails extends Hackathon {
   registration_count?: number
   is_registered?: boolean
 }
 
-export interface BlogWithDetails extends import('./database').Blog {
-  profiles?: import('./database').Profile
-  blog_categories?: import('./database').BlogCategory
+export interface BlogWithDetails extends Blog {
+  profiles?: Profile
+  blog_categories?: BlogCategory
   tags?: Array<{ name: string; slug: string }>
 }
 

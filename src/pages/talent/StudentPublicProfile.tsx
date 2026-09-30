@@ -5,7 +5,7 @@ import { Card, Badge, LoadingSpinner } from '@/components/ui'
 import { MapPin, Mail, Github, Linkedin, Globe } from 'lucide-react'
 
 export default function StudentPublicProfile() {
-  const { id } = useParams()
+  const { id } = useParams<{ id: string }>()
   const [loading, setLoading] = useState(true)
   const [student, setStudent] = useState<any>(null)
 
