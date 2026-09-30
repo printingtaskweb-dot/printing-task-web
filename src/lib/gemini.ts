@@ -12,8 +12,14 @@ export function getGeminiApiKey(): string {
   const storedKey = typeof window !== 'undefined' ? localStorage.getItem('skillbridge_gemini_api_key') : null
   if (storedKey && storedKey.trim()) return storedKey.trim()
 
-  // 2. Check environment variable (configured in .env or Vercel Environment Variables)
-  return (import.meta.env.VITE_GEMINI_API_KEY as string) || ''
+  // 2. Check environment variables (supports GEMINI_API_KEY or VITE_GEMINI_API_KEY)
+  const envKey =
+    (import.meta.env.GEMINI_API_KEY as string) ||
+    (import.meta.env.VITE_GEMINI_API_KEY as string) ||
+    ''
+  if (envKey && envKey.trim()) return envKey.trim()
+
+  return ''
 }
 
 export function setGeminiApiKey(key: string) {
