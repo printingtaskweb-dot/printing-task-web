@@ -2,6 +2,8 @@ import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { format, formatDistanceToNow, parseISO } from 'date-fns'
 
+export type BadgeVariant = 'blue' | 'green' | 'yellow' | 'red' | 'gray' | 'purple' | 'orange'
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
@@ -32,15 +34,15 @@ export function truncate(text: string, maxLength: number): string {
 
 export function formatSalary(min?: number | null, max?: number | null, currency = 'INR'): string {
   if (!min && !max) return 'Salary not disclosed'
-  const fmt = (n: number) => {
+  const fmtNum = (n: number) => {
     if (n >= 100000) return `${(n / 100000).toFixed(1)}L`
     if (n >= 1000) return `${(n / 1000).toFixed(0)}K`
     return n.toString()
   }
   const symbol = currency === 'INR' ? '₹' : '$'
-  if (min && max) return `${symbol}${fmt(min)} - ${symbol}${fmt(max)}`
-  if (min) return `${symbol}${fmt(min)}+`
-  if (max) return `Up to ${symbol}${fmt(max)}`
+  if (min && max) return `${symbol}${fmtNum(min)} - ${symbol}${fmtNum(max)}`
+  if (min) return `${symbol}${fmtNum(min)}+`
+  if (max) return `Up to ${symbol}${fmtNum(max)}`
   return 'Salary not disclosed'
 }
 
@@ -87,17 +89,17 @@ export function formatAvailability(types: string[]): string {
   return types.map(t => map[t] || t).join(', ')
 }
 
-export function getApplicationStatusColor(status: string): string {
-  const map: Record<string, string> = {
-    applied: 'badge-blue',
-    under_review: 'badge-yellow',
-    shortlisted: 'badge-purple',
-    interview: 'badge-blue',
-    selected: 'badge-green',
-    rejected: 'badge-red',
-    withdrawn: 'badge-gray',
+export function getApplicationStatusColor(status: string): BadgeVariant {
+  const map: Record<string, BadgeVariant> = {
+    applied: 'blue',
+    under_review: 'yellow',
+    shortlisted: 'purple',
+    interview: 'blue',
+    selected: 'green',
+    rejected: 'red',
+    withdrawn: 'gray',
   }
-  return map[status] || 'badge-gray'
+  return map[status] || 'gray'
 }
 
 export function getApplicationStatusLabel(status: string): string {
@@ -113,16 +115,16 @@ export function getApplicationStatusLabel(status: string): string {
   return map[status] || status
 }
 
-export function getHackathonStatusColor(status: string): string {
-  const map: Record<string, string> = {
-    draft: 'badge-gray',
-    upcoming: 'badge-blue',
-    registration_open: 'badge-green',
-    ongoing: 'badge-purple',
-    completed: 'badge-gray',
-    cancelled: 'badge-red',
+export function getHackathonStatusColor(status: string): BadgeVariant {
+  const map: Record<string, BadgeVariant> = {
+    draft: 'gray',
+    upcoming: 'blue',
+    registration_open: 'green',
+    ongoing: 'purple',
+    completed: 'gray',
+    cancelled: 'red',
   }
-  return map[status] || 'badge-gray'
+  return map[status] || 'gray'
 }
 
 export function getHackathonStatusLabel(status: string): string {
