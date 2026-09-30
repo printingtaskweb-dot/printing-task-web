@@ -27,7 +27,7 @@ interface ChatMessage {
 }
 
 export function AiChatWidget() {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -49,8 +49,11 @@ export function AiChatWidget() {
     setApiKeyInput(key)
   }, [showKeyModal, isOpen])
 
-  // Initialize role-specific welcome message
+  // Initialize role-specific welcome message — wait for auth to finish loading
   useEffect(() => {
+    // Don't set welcome message until we know if user is logged in
+    if (authLoading) return
+
     let initialGreeting = ''
 
     if (role === 'admin') {
@@ -72,7 +75,7 @@ export function AiChatWidget() {
         source: 'gemini',
       },
     ])
-  }, [role, user?.full_name])
+  }, [role, user?.full_name, authLoading])
 
   // Scroll to bottom on new messages
   useEffect(() => {
