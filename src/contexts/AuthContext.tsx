@@ -9,7 +9,6 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, role: 'student' | 'business_owner') => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   refreshUser: () => Promise<void>
-  setDemoUser: (role: 'student' | 'business_owner' | 'admin') => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -19,7 +18,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
     try {
       const cached = localStorage.getItem(LOCAL_STORAGE_KEY)
-      return cached ? JSON.parse(cached) : null
+      if (!cached) return null
+      const parsed = JSON.parse(cached) as AuthUser
+      // Never restore a demo user from cache
+      if (parsed?.id?.startsWith('demo-')) return null
+      return parsed
     } catch {
       return null
     }
@@ -35,74 +38,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const fetchOrCreateProfile = async (authUser: any): Promise<AuthUser> => {
-    const meta = authUser.user_metadata || {}
-    const role = meta.role || 'student'
-    const fullName = meta.full_name || authUser.email?.split('@')[0] || 'User'
-
+  /**
+   * Fetch the user's profile from the database.
+   * Role is ALWAYS read from the database — never from auth metadata.
+   * This prevents any client-side manipulation of role.
+   */
+  const fetchProfile = async (authUser: any): Promise<AuthUser | null> => {
     try {
-      // 1. Try to fetch existing profile
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, email, full_name, role, avatar_url, onboarding_completed')
         .eq('id', authUser.id)
         .maybeSingle()
 
-      if (data) {
-        return {
-          id: data.id,
-          email: data.email,
-          role: data.role,
-          full_name: data.full_name,
-          avatar_url: data.avatar_url,
-          onboarding_completed: data.onboarding_completed ?? false,
-        }
+      if (error || !data) return null
+
+      // Role comes ONLY from DB, never from metadata
+      return {
+        id: data.id,
+        email: data.email,
+        role: data.role as 'student' | 'business_owner' | 'admin',
+        full_name: data.full_name,
+        avatar_url: data.avatar_url,
+        onboarding_completed: data.onboarding_completed ?? false,
       }
-
-      // 2. If no profile exists, create one via upsert
-      const { data: newProfile, error: insertError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: authUser.id,
-          email: authUser.email,
-          full_name: fullName,
-          role: role as any,
-          onboarding_completed: false,
-        })
-        .select()
-        .single()
-
-      if (newProfile) {
-        return {
-          id: newProfile.id,
-          email: newProfile.email,
-          role: newProfile.role,
-          full_name: newProfile.full_name,
-          avatar_url: newProfile.avatar_url,
-          onboarding_completed: newProfile.onboarding_completed ?? false,
-        }
-      }
-    } catch (err) {
-      console.warn('Profile sync fallback:', err)
-    }
-
-    // 3. Fallback to auth session metadata if DB fails
-    return {
-      id: authUser.id,
-      email: authUser.email || '',
-      role: role as 'student' | 'business_owner' | 'admin',
-      full_name: fullName,
-      avatar_url: null,
-      onboarding_completed: true,
+    } catch {
+      return null
     }
   }
 
   const refreshUser = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user) {
-      const profile = await fetchOrCreateProfile(session.user)
+      const profile = await fetchProfile(session.user)
       saveUser(profile)
-    } else if (!user?.id.startsWith('demo-')) {
+    } else {
       saveUser(null)
     }
   }
@@ -111,18 +81,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Session check on mount
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const profile = await fetchOrCreateProfile(session.user)
+        const profile = await fetchProfile(session.user)
         saveUser(profile)
-      } else if (!user?.id.startsWith('demo-')) {
+      } else {
         saveUser(null)
       }
       setIsLoading(false)
     })
 
-    // Auth listener
+    // Auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && session?.user) {
-        const profile = await fetchOrCreateProfile(session.user)
+      if (
+        (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') &&
+        session?.user
+      ) {
+        const profile = await fetchProfile(session.user)
         saveUser(profile)
       } else if (event === 'SIGNED_OUT') {
         saveUser(null)
@@ -136,25 +109,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (data?.user) {
-      const profile = await fetchOrCreateProfile(data.user)
+      const profile = await fetchProfile(data.user)
       saveUser(profile)
     }
     return { error }
   }
 
-  const signUp = async (email: string, password: string, fullName: string, role: 'student' | 'business_owner') => {
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    role: 'student' | 'business_owner'
+  ) => {
+    // Only 'student' or 'business_owner' can be passed here.
+    // 'admin' role can only be granted via database SQL — never via signup.
+    const safeRole: 'student' | 'business_owner' =
+      role === 'business_owner' ? 'business_owner' : 'student'
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           full_name: fullName,
-          role,
+          role: safeRole,
         },
       },
     })
     if (data?.user) {
-      const profile = await fetchOrCreateProfile(data.user)
+      const profile = await fetchProfile(data.user)
       saveUser(profile)
     }
     return { error }
@@ -165,21 +148,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     saveUser(null)
   }
 
-  // Demo user helper for instant local testing
-  const setDemoUser = (role: 'student' | 'business_owner' | 'admin') => {
-    const demo: AuthUser = {
-      id: `demo-${role}-123`,
-      email: `demo.${role}@skillbridge.com`,
-      role,
-      full_name: role === 'student' ? 'Alex Rivera (Demo)' : role === 'business_owner' ? 'Sarah Jenkins (Demo)' : 'System Admin (Demo)',
-      avatar_url: null,
-      onboarding_completed: true,
-    }
-    saveUser(demo)
-  }
-
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut, refreshUser, setDemoUser }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )
