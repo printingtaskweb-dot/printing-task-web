@@ -5,11 +5,16 @@ import { Card, Badge, LoadingSpinner } from '@/components/ui'
 import { MapPin, Mail, Github, Linkedin, Globe } from 'lucide-react'
 
 export default function StudentPublicProfile() {
-  const { id } = useParams<{ id: string }>()
+  const params = useParams()
+  const id = params.id as string
   const [loading, setLoading] = useState(true)
   const [student, setStudent] = useState<any>(null)
 
   useEffect(() => {
+    if (!id) {
+      setLoading(false)
+      return
+    }
     async function loadProfile() {
       try {
         const { data } = await supabase
