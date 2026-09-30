@@ -137,13 +137,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // Safety timeout: ensure loading screen is dismissed within 1s even on slow connections
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      clearTimeout(timer)
       if (session?.user) {
         const profile = await fetchProfile(session.user)
         saveUser(profile)
       } else {
         saveUser(null)
       }
+      setIsLoading(false)
+    }).catch(err => {
+      clearTimeout(timer)
+      console.warn('Auth getSession warning:', err)
       setIsLoading(false)
     })
 
