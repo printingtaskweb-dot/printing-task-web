@@ -2,11 +2,31 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { supabase } from '@/lib/supabase'
 import type { AuthUser } from '@/types'
 
+export interface SignUpExtraData {
+  category?: string
+  headline?: string
+  businessName?: string
+  lookingFor?: string
+}
+
+export interface SignUpResult {
+  user: any
+  session: any
+  error: Error | null
+  emailConfirmationRequired: boolean
+}
+
 interface AuthContextType {
   user: AuthUser | null
   isLoading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
-  signUp: (email: string, password: string, fullName: string, role: 'student' | 'business_owner') => Promise<{ error: Error | null }>
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    role: 'student' | 'business_owner',
+    extraData?: SignUpExtraData
+  ) => Promise<SignUpResult>
   signOut: () => Promise<void>
   refreshUser: () => Promise<void>
 }
@@ -20,7 +40,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cached = localStorage.getItem(LOCAL_STORAGE_KEY)
       if (!cached) return null
       const parsed = JSON.parse(cached) as AuthUser
-      // Never restore a demo user from cache
       if (parsed?.id?.startsWith('demo-')) return null
       return parsed
     } catch {
@@ -40,27 +59,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * Fetch the user's profile from the database.
-   * Role is ALWAYS read from the database — never from auth metadata.
-   * This prevents any client-side manipulation of role.
+   * If the profile doesn't exist yet (e.g. database trigger didn't run),
+   * safely create it so the user can continue smoothly.
    */
   const fetchProfile = async (authUser: any): Promise<AuthUser | null> => {
+    if (!authUser?.id) return null
+
     try {
+      // 1. Try reading from profiles table
       const { data, error } = await supabase
         .from('profiles')
         .select('id, email, full_name, role, avatar_url, onboarding_completed')
         .eq('id', authUser.id)
         .maybeSingle()
 
-      if (error || !data) return null
+      if (data) {
+        return {
+          id: data.id,
+          email: data.email,
+          role: data.role as 'student' | 'business_owner' | 'admin',
+          full_name: data.full_name,
+          avatar_url: data.avatar_url,
+          onboarding_completed: data.onboarding_completed ?? false,
+        }
+      }
 
-      // Role comes ONLY from DB, never from metadata
+      // 2. If row not found in profiles, attempt to create it
+      const meta = authUser.user_metadata || {}
+      const role = meta.role === 'business_owner' ? 'business_owner' : 'student'
+      const fullName = meta.full_name || authUser.email?.split('@')[0] || 'User'
+
+      const { data: created } = await supabase
+        .from('profiles')
+        .upsert({
+          id: authUser.id,
+          email: authUser.email,
+          full_name: fullName,
+          role: role,
+          onboarding_completed: false,
+        })
+        .select('id, email, full_name, role, avatar_url, onboarding_completed')
+        .maybeSingle()
+
+      if (created) {
+        return {
+          id: created.id,
+          email: created.email,
+          role: created.role as 'student' | 'business_owner' | 'admin',
+          full_name: created.full_name,
+          avatar_url: created.avatar_url,
+          onboarding_completed: created.onboarding_completed ?? false,
+        }
+      }
+
+      // 3. Fallback user object if database is temporarily unreachable
       return {
-        id: data.id,
-        email: data.email,
-        role: data.role as 'student' | 'business_owner' | 'admin',
-        full_name: data.full_name,
-        avatar_url: data.avatar_url,
-        onboarding_completed: data.onboarding_completed ?? false,
+        id: authUser.id,
+        email: authUser.email || '',
+        role: role,
+        full_name: fullName,
+        avatar_url: null,
+        onboarding_completed: false,
       }
     } catch {
       return null
@@ -78,7 +137,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    // Session check on mount
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         const profile = await fetchProfile(session.user)
@@ -89,7 +147,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false)
     })
 
-    // Auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (
         (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') &&
@@ -119,10 +176,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
     fullName: string,
-    role: 'student' | 'business_owner'
-  ) => {
-    // Only 'student' or 'business_owner' can be passed here.
-    // 'admin' role can only be granted via database SQL — never via signup.
+    role: 'student' | 'business_owner',
+    extraData?: SignUpExtraData
+  ): Promise<SignUpResult> => {
     const safeRole: 'student' | 'business_owner' =
       role === 'business_owner' ? 'business_owner' : 'student'
 
@@ -133,14 +189,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: {
           full_name: fullName,
           role: safeRole,
+          category: extraData?.category || '',
+          headline: extraData?.headline || '',
+          business_name: extraData?.businessName || '',
+          looking_for: extraData?.lookingFor || '',
         },
       },
     })
-    if (data?.user) {
+
+    if (error) {
+      return { user: null, session: null, error, emailConfirmationRequired: false }
+    }
+
+    const emailConfirmationRequired = !data?.session && !!data?.user
+
+    if (data?.session && data?.user) {
       const profile = await fetchProfile(data.user)
       saveUser(profile)
+
+      // Initialize category and role records if possible
+      if (safeRole === 'student' && extraData?.category) {
+        try {
+          await supabase.from('student_profiles').upsert({
+            user_id: data.user.id,
+            headline: extraData.headline || `${extraData.category} Enthusiast`,
+            experience_level: 'fresher',
+          })
+        } catch (e) {
+          console.warn('Initial student profile notice:', e)
+        }
+      } else if (safeRole === 'business_owner' && extraData?.businessName) {
+        try {
+          const slug = extraData.businessName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Math.random().toString(36).substring(2, 6)
+          await supabase.from('business_profiles').upsert({
+            user_id: data.user.id,
+            business_name: extraData.businessName,
+            owner_name: fullName,
+            slug,
+            category: extraData.category || '',
+            looking_for: extraData.lookingFor ? [extraData.lookingFor] : [],
+            verification_status: 'verified',
+          })
+        } catch (e) {
+          console.warn('Initial business profile notice:', e)
+        }
+      }
     }
-    return { error }
+
+    return {
+      user: data?.user || null,
+      session: data?.session || null,
+      error: null,
+      emailConfirmationRequired,
+    }
   }
 
   const signOut = async () => {
