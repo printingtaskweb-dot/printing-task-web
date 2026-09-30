@@ -5,6 +5,7 @@ import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { PageLoader } from '@/components/ui'
+import { AiChatWidget } from '@/components/ai'
 
 // Lazy loaded pages
 const HomePage = lazy(() => import('@/pages/home/HomePage'))
@@ -68,13 +69,11 @@ function ProtectedRoute({
   allowedRoles?: Array<'student' | 'business_owner' | 'admin'>
 }) {
   const { user, isLoading } = useAuth()
-  const location = useLocation()
 
   if (isLoading) return <PageLoader />
   if (!user) return <Navigate to="/login" replace />
-  if (!user.onboarding_completed && !location.pathname.includes('/onboarding')) {
-    return <Navigate to={user.role === 'student' ? '/onboarding/student' : '/onboarding/business'} replace />
-  }
+
+  // Only restrict if role is not allowed
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />
   }
@@ -190,6 +189,9 @@ export default function App() {
           </PublicLayout>
         } />
       </Routes>
+
+      {/* Global Floating AI Copilot Widget */}
+      <AiChatWidget />
     </Suspense>
   )
 }
