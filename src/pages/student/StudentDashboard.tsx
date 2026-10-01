@@ -122,6 +122,30 @@ export default function StudentDashboard() {
         <div className="absolute -right-8 -bottom-10 w-64 h-64 bg-white/5 rounded-full pointer-events-none" />
       </div>
 
+      {/* Category Setup Alert if profile is fresh */}
+      {(!studentProfile?.primary_category_id || studentProfile?.headline === 'Aspiring Professional') && (
+        <Card className="bg-amber-50/80 border-amber-200 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-xs text-lg">
+                🎯
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-amber-900">Select Your Domain Category & Skills</h2>
+                <p className="text-xs text-amber-700">
+                  Set your primary domain (Development, Design, Marketing, etc.) to get matched with 5x more hiring businesses.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link to="/profile" className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                Complete Setup <ArrowRight size={14} />
+              </Link>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* AI Quick Actions Bar */}
       <Card className="bg-gradient-to-r from-blue-50/60 to-indigo-50/40 border-primary-100 p-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
