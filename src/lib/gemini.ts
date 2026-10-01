@@ -174,7 +174,7 @@ export async function askGeminiAgent(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'qwen-qwq-32b',
+        model: 'qwen/qwen3-8b-27b',
         messages,
         temperature: 0.7,
         max_tokens: 1024,
