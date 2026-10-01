@@ -67,13 +67,13 @@ export function AiChatWidget() {
     let initialGreeting = ''
 
     if (role === 'admin') {
-      initialGreeting = `👋 Greetings Admin ${user?.full_name || ''}! I'm your **Gemini AI Operations Assistant**.\n\nI can help you:\n• Summarize platform metrics & application volumes\n• Review and moderate job listings and business approvals\n• Draft announcements, release notes, and blog articles\n\nWhat platform task would you like to review?`
+      initialGreeting = `👋 Greetings Admin ${user?.full_name || ''}! I'm your **Qwen AI Operations Assistant** (Powered by Groq).\n\nI can help you:\n• Summarize platform metrics & application volumes\n• Review and moderate job listings and business approvals\n• Draft announcements, release notes, and blog articles\n\nWhat platform task would you like to review?`
     } else if (role === 'business_owner') {
-      initialGreeting = `👋 Hi ${user?.full_name || 'there'}! I'm your **Gemini Talent & Hiring Assistant**.\n\nI can help you:\n• Discuss what skills or roles you need and find the best student employees\n• Draft structured, compelling job descriptions in seconds\n• Suggest competitive intern stipends and screening criteria\n\nWhat kind of employee or intern are you looking for today?`
+      initialGreeting = `👋 Hi ${user?.full_name || 'there'}! I'm your **Qwen AI Talent & Hiring Assistant**.\n\nI can help you:\n• Discuss what skills or roles you need and find the best student employees\n• Draft structured, compelling job descriptions in seconds\n• Suggest competitive intern stipends and screening criteria\n\nWhat kind of employee or intern are you looking for today?`
     } else if (role === 'student') {
-      initialGreeting = `👋 Hi ${user?.full_name || 'there'}! I'm your **Gemini AI Career & Resume Assistant**.\n\nI can help you:\n• **Generate an ATS-ready professional resume** for your domain\n• Find and match live jobs tailored to your skills & projects\n• Craft engaging cover letters and interview prep tips\n\nWhat would you like to build or apply for today?`
+      initialGreeting = `👋 Hi ${user?.full_name || 'there'}! I'm your **Qwen AI Career & Resume Assistant**.\n\nI can help you:\n• **Generate an ATS-ready professional resume** for your domain\n• Find and match live jobs tailored to your skills & projects\n• Craft engaging cover letters and interview prep tips\n\nWhat would you like to build or apply for today?`
     } else {
-      initialGreeting = `👋 Welcome to **SkillBridge**! I'm your AI Platform Copilot.\n\nAre you looking to **hire top student talent** or **discover student jobs & internships**? Ask me anything about how SkillBridge works!`
+      initialGreeting = `👋 Welcome to **SkillBridge**! I'm your Qwen AI Copilot.\n\nAre you looking to **hire top student talent** or **discover student jobs & internships**? Ask me anything about how SkillBridge works!`
     }
 
     setMessages([
@@ -222,7 +222,7 @@ export function AiChatWidget() {
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 border-2 border-primary-600 rounded-full" />
             </div>
             <span className="text-sm font-semibold tracking-wide pr-1">
-              Gemini AI Copilot
+              Qwen AI Copilot
             </span>
           </button>
         )}
@@ -238,7 +238,7 @@ export function AiChatWidget() {
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm font-bold tracking-tight">Gemini AI Copilot</h3>
+                    <h3 className="text-sm font-bold tracking-tight">Qwen AI Copilot</h3>
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
                     {hasKey && (
                       <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white font-mono">
@@ -261,7 +261,7 @@ export function AiChatWidget() {
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setShowKeyModal(!showKeyModal)}
-                  title="Configure Gemini API Key"
+                  title="Configure Groq API Key"
                   className={cn(
                     "p-1.5 rounded-lg transition-colors",
                     hasKey ? "text-amber-300 hover:bg-white/10" : "text-primary-100 hover:text-white hover:bg-white/10"
@@ -285,12 +285,12 @@ export function AiChatWidget() {
               </div>
             </div>
 
-            {/* API Key Drawer / Configuration Bar */}
+            {/* API Key Drawer — Groq Key Configuration */}
             {showKeyModal && (
               <div className="p-3 bg-amber-50/90 border-b border-amber-200 text-xs space-y-2 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-amber-900 flex items-center gap-1">
-                    <Key size={13} /> Gemini API Key Setting:
+                    <Key size={13} /> Groq API Key (Qwen 32B):
                   </span>
                   <button onClick={() => setShowKeyModal(false)} className="text-amber-700 hover:text-amber-900">
                     <X size={13} />
@@ -301,7 +301,7 @@ export function AiChatWidget() {
                     type="password"
                     value={apiKeyInput}
                     onChange={e => setApiKeyInput(e.target.value)}
-                    placeholder="AIzaSy... (Paste Gemini Key)"
+                    placeholder="gsk_... (Paste Groq API Key)"
                     className="flex-1 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
                   />
                   <Button size="sm" onClick={handleSaveApiKey} className="h-7 text-xs px-2.5 bg-amber-600 hover:bg-amber-700 text-white">
@@ -309,7 +309,7 @@ export function AiChatWidget() {
                   </Button>
                 </div>
                 <p className="text-[10px] text-amber-700">
-                  Key is saved securely in your browser session. If left empty, SkillBridge uses built-in smart assistant mode.
+                  Key saved securely in your browser. Get your free key at <strong>console.groq.com</strong>
                 </p>
               </div>
             )}
@@ -378,7 +378,7 @@ export function AiChatWidget() {
               {isTyping && (
                 <div className="flex items-center gap-1.5 text-gray-500 bg-white border border-gray-200 w-fit px-3 py-2 rounded-2xl text-xs rounded-bl-xs">
                   <Bot size={13} className="text-primary-600 animate-spin" />
-                  <span>Gemini AI is formulating response...</span>
+                  <span>Qwen AI is thinking...</span>
                 </div>
               )}
               <div ref={messagesEndRef} />
